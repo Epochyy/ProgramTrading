@@ -1,0 +1,15 @@
+﻿生成启动时间为 2017/7/3 17:38:01。
+     1>项目“D:\ReqOrder\ReqOrder\ReqOrder.vcxproj”在节点 2 上(Build 个目标)。
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /ID:\ReqOrder\include /IC:\local\boost_1_59_0 /ZI /nologo /W3 /WX- /sdl /MP /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _LIB /D _SCL_SECURE_NO_WARNINGS /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /openmp /Yu"stdafx.h" /Fp"Debug\ReqOrder.pch" /Fo"Debug\\" /Fd"Debug\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt ReqOrder.cpp
+         ReqOrder.cpp
+     1>c:\local\boost_1_59_0\boost\property_tree\detail\json_parser\standard_callbacks.hpp(132): warning C4715: “boost::property_tree::json_parser::detail::standard_callbacks<boost::property_tree::basic_ptree<std::basic_string<char,std::char_traits<char>,std::allocator<char> >,std::basic_string<char,std::char_traits<char>,std::allocator<char> >,std::less<std::basic_string<char,std::char_traits<char>,std::allocator<char> > > > >::new_tree”: 不是所有的控件路径都返回值
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"D:\ReqOrder\Debug\ReqOrder.exe" /INCREMENTAL /NOLOGO /LIBPATH:..\include /LIBPATH:..\lib /LIBPATH:"C:\local\boost_1_59_0\lib32-msvc-12.0" thostmduserapi.lib thosttraderapi.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"D:\ReqOrder\Debug\ReqOrder.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"D:\ReqOrder\Debug\ReqOrder.lib" /MACHINE:X86 Debug\ReqOrder.obj
+         Debug\stdafx.obj
+         ReqOrder.vcxproj -> D:\ReqOrder\Debug\ReqOrder.exe
+     1>已完成生成项目“D:\ReqOrder\ReqOrder\ReqOrder.vcxproj”(Build 个目标)的操作。
+
+生成成功。
+
+已用时间 00:00:03.30
