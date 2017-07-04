@@ -17,7 +17,7 @@ ofstream ofile;
 
 void ReadFile::OnFrontConnected()
 {
-	//cout << "连接成功" << endl;
+	cout << "连接成功" << endl;
 	ReqUserLogin();
 }
 
@@ -70,6 +70,7 @@ void ReadFile::ReqUserLogin()
 	ctp_investor_id_.copy(req.UserID, ctp_investor_id_.length(), 0);
 	ctp_trade_password_.copy(req.Password, ctp_trade_password_.length(), 0);
 	int iResult = this->ctp_trade->ReqUserLogin(&req, ++this->trade_request_id_);
+	//cout << "登录" << ((iResult == 0) ? "成功" : "失败") << endl;
 }
 
 void ReadFile::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
@@ -81,7 +82,7 @@ void ReadFile::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, CThost
 		strcpy_s(order_ref, pRspUserLogin->MaxOrderRef);
 		Ref = atoi(pRspUserLogin->MaxOrderRef);
 		ofile << "用户ID: " << pRspUserLogin->UserID << endl;
-		ReqQryInstrument();
+		//ReqQryInstrument();
 	}
 }
 
@@ -90,7 +91,7 @@ void ReadFile::load_connection_from_file()
 	try
 	{
 		boost::property_tree::ptree pt;
-		boost::property_tree::read_json("connection_50etf.txt", pt);
+		boost::property_tree::read_json("connection.txt", pt);
 		BOOST_FOREACH(const boost::property_tree::ptree::value_type& v, pt.get_child("accounts"))
 		{
 			CtpConnectionInfo conn;
@@ -146,53 +147,8 @@ void ReadFile::OnRspQryOrder(CThostFtdcOrderField *pOrder, CThostFtdcRspInfoFiel
 		query_cv_.notify_one();
 		query_finished_ = true;
 	}
-	ReqQryInstrument();
 }
 
-void ReadFile::ReqQryInstrument()
-{
-	CThostFtdcQryInstrumentField req;
-	memset(&req, 0, sizeof(req));
-	//strcpy_s(req.ExchangeID, "DCE");
-	int iResult = this->ctp_trade->ReqQryInstrument(&req, ++this->trade_request_id_);
-	cout << "请求查询合约: " << ((iResult == 0) ? "成功" : "失败") << endl;
-	boost::this_thread::sleep(boost::posix_time::seconds(1));
-}
-
-void ReadFile::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
-{
-	cout << "查询合约结果:" << endl;
-	if (!IsErrorRspInfo(pRspInfo))
-	{
-		cout << "交易所代码:" << pInstrument->ExchangeID << endl;
-		cout << "合约代码:" << pInstrument->InstrumentID << endl;
-		cout << "合约在交易所的代码:" << pInstrument->ExchangeInstID << endl;
-		cout << "执行价:" << pInstrument->StrikePrice << endl;
-		cout << "到期日:" << pInstrument->EndDelivDate << endl;
-		cout << "当前交易状态:" << pInstrument->IsTrading << endl;
-		ReqQryExchange();
-	}
-}
-
-void ReadFile::ReqQryExchange()
-{
-	CThostFtdcQryExchangeField req;
-	memset(&req, 0, sizeof(req));
-	int iResult = this->ctp_trade->ReqQryExchange(&req, ++this->trade_request_id_);
-	cout << "请求查询交易所: " << ((iResult == 0) ? "成功" : "失败") << endl;
-	boost::this_thread::sleep(boost::posix_time::seconds(1));
-}
-
-void ReadFile::OnRspQryExchange(CThostFtdcExchangeField *pExchange, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
-{
-	cout << "查询交易所结果:" << endl;
-	if (!IsErrorRspInfo(pRspInfo))
-	{
-		cout << "交易所代码" << pExchange->ExchangeID << endl;
-		cout << "交易所名称" << pExchange->ExchangeName << endl;
-		cout << "交易所属性" << pExchange->ExchangeProperty << endl;
-	}
-}
 
 void ReadFile::remove_all_orders()
 {
@@ -206,7 +162,6 @@ void ReadFile::remove_all_orders()
 	#pragma omp parallel num_threads(4)
 	for (int i = 0; i < s; i++)
 	{
-		cout <<"threads: "<< omp_get_thread_num()<<endl;
 		CThostFtdcOrderField *p = static_cast<CThostFtdcOrderField*> (query_buffer_[i]);
 
 		if (IsTradingOrder(static_cast<CThostFtdcOrderField*>(p)))
@@ -237,18 +192,18 @@ void  ReadFile::OnRtnOrder(CThostFtdcOrderField *pOrder)
 	sprintf_s(str, "%d", pOrder->OrderSubmitStatus);
 	int orderState = atoi(str) - 48;
 
-	//cout << "报单应答!" << endl;
+	cout << "报单应答!" << endl;
 	
 	if (pOrder->OrderStatus == THOST_FTDC_OST_Canceled){
 		omp_set_lock(&c_lock);
-		cout << "已撤单！" << endl;
-		omp_unset_lock(&c_lock);
+		ofile << "用户名: " << pOrder->InvestorID << "\t";
 		ofile << "交易所代码: " << pOrder->ExchangeID << "\t";
 		ofile <<"合约代码: "<< pOrder->InstrumentID << "\t";
 		ofile << "买卖方向: " << pOrder->Direction << "\t";
 		ofile << "平均价格: " << pOrder->LimitPrice << "\t";
 		ofile << "数量: " << pOrder->VolumeTotalOriginal << "\t";
 		ofile << "交易日期: " << pOrder->TradingDay << endl;
+		omp_unset_lock(&c_lock);
 	}
 }
 
@@ -273,7 +228,7 @@ bool ReadFile::IsTradingOrder(CThostFtdcOrderField *pOrder)
 //指示该次返回是否为针对 nRequestID 的最后一次返回
 void  ReadFile::OnRspOrderAction(CThostFtdcInputOrderActionField *pInputOrderAction, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
-	cerr << "OnRspOrderAction" << endl;
+	cout << "OnRspOrderAction" << endl;
 	if (!IsErrorRspInfo(pRspInfo)){
 		assert(0);
 	}
@@ -304,6 +259,13 @@ void ReadFile::ReqOrderAction(CThostFtdcOrderField *pOrder)
 	int iResult = ctp_trade->ReqOrderAction(&req, ++this->trade_request_id_);
 }
 
+void ReadFile::OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	cout << "OnRspError" << endl;
+	cout << pRspInfo->ErrorID << ":" << pRspInfo->ErrorMsg << endl;
+	IsErrorRspInfo(pRspInfo);
+}
+
 int _tmain(int argc, _TCHAR* argv[])
 {
 	ReadFile r;
@@ -314,12 +276,13 @@ int _tmain(int argc, _TCHAR* argv[])
 	omp_set_num_threads(2);
 	omp_set_dynamic(4);
 	ReadFile r1;
-//#pragma omp parallel for private(r1) 
+#pragma omp parallel for private(r1) 
 	for (int i = 0; i < s; i++)
 	{
 		ReadFile r1;
 		r1.initialize(conns[i]);
-		//r1.remove_all_orders();
+		r1.remove_all_orders();
+		boost::this_thread::sleep(boost::posix_time::seconds(1));
 		r1.UnInitialUserApi();
 	}
 	ofile.close();

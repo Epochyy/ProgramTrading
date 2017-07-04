@@ -46,25 +46,7 @@ public:
 	void ReqUserLogin();
 	void ReqQryOrder();
 	void ReqOrderAction(CThostFtdcOrderField *pOrder);
-
-	void ReqQryInstrument();
-	void ReqQryExchange();
-	void ReqQryProduct();
-	void ReqQryInstrumentMarginRate();
-	void ReqQryInstrumentCommissionRate();
-
-	//交易所
-	virtual void OnRspQryExchange(CThostFtdcExchangeField *pExchange, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
-	//合约
-	virtual void OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
-	//产品响应
-	//virtual void OnRspQryProduct(CThostFtdcProductField *pProduct, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
-	//保证金率
-	//virtual void OnRspQryInstrumentMarginRate(CThostFtdcInstrumentMarginRateField *pInstrumentMarginRate, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
-	//手续费率
-	//virtual void OnRspQryInstrumentCommissionRate(CThostFtdcInstrumentCommissionRateField *pInstrumentCommissionRate, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
-
-
+	virtual void OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 	virtual void OnRspQryOrder(CThostFtdcOrderField *pOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
 	virtual bool IsErrorRspInfo(CThostFtdcRspInfoField *pRspInfo);
 	virtual void OnFrontConnected();
