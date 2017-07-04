@@ -14,6 +14,9 @@ using namespace std;
 static omp_lock_t c_lock;
 ofstream ofile;
 ofstream ofile1;
+ofstream ofile2;
+ofstream ofile3;
+ofstream ofile4;
 
 void ReqInstrument::load_connection_from_file()
 {
@@ -121,7 +124,11 @@ void ReqInstrument::OnRspUserLogin(CThostFtdcRspUserLoginField *pRspUserLogin, C
 		Ref = atoi(pRspUserLogin->MaxOrderRef);
 		ofile << "用户ID: " << pRspUserLogin->UserID << endl;
 		ofile1 << "用户ID: " << pRspUserLogin->UserID << endl;
+		ofile2 << "用户ID: " << pRspUserLogin->UserID << endl;
+		ofile3 << "用户ID: " << pRspUserLogin->UserID << endl;
+		ofile4 << "用户ID: " << pRspUserLogin->UserID << endl;
 		ReqQryInstrument();
+		//ReqQryExchange();
 	}
 }
 
@@ -149,7 +156,7 @@ void ReqInstrument::OnRspQryOrder(CThostFtdcOrderField *pOrder, CThostFtdcRspInf
 		query_cv_.notify_one();
 		query_finished_ = true;
 	}
-	ReqQryInstrument();
+	//ReqQryInstrument();
 }
 
 void ReqInstrument::ReqQryInstrument()
@@ -166,6 +173,9 @@ void ReqInstrument::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, C
 	//cout << "查询合约结果在文件Instrument.txt中" << endl;
 	if (!IsErrorRspInfo(pRspInfo))
 	{
+		CThostFtdcInstrumentField* ctp_instrument = new CThostFtdcInstrumentField();
+		*ctp_instrument = *pInstrument;
+		query_instrument_.push_back(ctp_instrument);
 		ofile << "合约代码:" << pInstrument->InstrumentID << "\t";
 		ofile << "交易所代码:" << pInstrument->ExchangeID << "\t";
 		ofile << "合约名称:" << pInstrument->InstrumentName << "\t";
@@ -202,8 +212,10 @@ void ReqInstrument::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, C
 		{
 			cout << "查询合约结果在文件Instrument.txt中" << endl;
 			//boost::this_thread::sleep(boost::posix_time::seconds(1));
+			query_cv_.notify_one();
+			query_finished_ = true;
 			ReqQryExchange();
-			boost::this_thread::sleep(boost::posix_time::seconds(1));
+			//boost::this_thread::sleep(boost::posix_time::seconds(1));
 		}
 	}
 }
@@ -228,6 +240,7 @@ void ReqInstrument::OnRspQryExchange(CThostFtdcExchangeField *pExchange, CThostF
 		if (bIsLast)
 		{
 			cout << "查询交易所结果在Exchange.txt中" << endl;
+			ReqQryProduct();
 		}
 	}
 }
@@ -273,7 +286,6 @@ void  ReqInstrument::OnRtnOrder(CThostFtdcOrderField *pOrder)
 		cout << "已撤单！" << endl;
 		omp_unset_lock(&c_lock);
 		ofile << "合约代码: " << pOrder->InstrumentID << "\t";
-		ofile << "交易所代码: " << pOrder->ExchangeID << "\t";
 		ofile << "交易所代码: " << pOrder->ExchangeID << "\t";
 		ofile << "买卖方向: " << pOrder->Direction << "\t";
 		ofile << "平均价格: " << pOrder->LimitPrice << "\t";
@@ -334,6 +346,153 @@ void ReqInstrument::ReqOrderAction(CThostFtdcOrderField *pOrder)
 	int iResult = ctp_trade->ReqOrderAction(&req, ++this->trade_request_id_);
 }
 
+void ReqInstrument::ReqQryProduct()
+{
+	CThostFtdcQryProductField req;
+	memset(&req, 0, sizeof(req));
+	int iResult = ctp_trade->ReqQryProduct(&req, ++this->trade_request_id_);
+	cout << "请求产品查询: " << ((iResult == 0) ? "成功" : "失败") << endl;
+	boost::this_thread::sleep(boost::posix_time::seconds(1));
+}
+
+void ReqInstrument::OnRspQryProduct(CThostFtdcProductField *pProduct, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	if (!IsErrorRspInfo(pRspInfo))
+	{
+		ofile2 << "产品代码: " << pProduct->ProductID << "\t";
+		ofile2 << "产品名称: " << pProduct->ProductName << "\t";
+		ofile2 << "交易所代码: " << pProduct->ExchangeID << "\t";
+		ofile2 << "产品类型: " << pProduct->ProductClass << "\t";
+		ofile2 << "合约数量乘数: " << pProduct->VolumeMultiple << "\t";
+		ofile2 << "最小变动价位: " << pProduct->PriceTick << "\t";
+		ofile2 << "市价单最大下单量: " << pProduct->MaxMarketOrderVolume << "\t";
+		ofile2 << "市价单最小下单量: " << pProduct->MinMarketOrderVolume << "\t";
+		ofile2 << "限价单最大下单量: " << pProduct->MaxLimitOrderVolume << "\t";
+		ofile2 << "限价单最小下单量: " << pProduct->MinLimitOrderVolume << "\t";
+		ofile2 << "持仓类型: " << pProduct->PositionType << "\t";
+		ofile2 << "持仓日期类型: " << pProduct->PositionDateType << "\t";
+		ofile2 << "平仓处理类型: " << pProduct->CloseDealType << "\t";
+		ofile2 << "交易币种类型: " << pProduct->TradeCurrencyID << "\t";
+		ofile2 << "质押资金可用范围: " << pProduct->MortgageFundUseRange << "\t";
+		ofile2 << "交易所产品代码: " << pProduct->ExchangeProductID << "\t";
+		ofile2 << "合约基础商品乘数: " << pProduct->UnderlyingMultiple << endl;
+		if (bIsLast)
+		{
+			cout << "查询结果在文件Product.txt中" << endl;
+			//ReqQryInstrumentMarginRate();
+			boost::this_thread::sleep(boost::posix_time::seconds(1));
+		}
+	}
+}
+
+void ReqInstrument::ReqQryInstrumentMarginRate()
+{
+	unique_lock<mutex> query_lock(query_mutex_);
+	ReqQryInstrument();
+	while (false == query_finished_)
+	{
+		query_cv_.wait(query_lock);
+	}
+	int s = query_instrument_.size();
+	cout << s << endl;
+#pragma omp parallel num_threads(4)
+	for (int i = 0; i < s; i++)
+	{
+		CThostFtdcInstrumentField *p = static_cast<CThostFtdcInstrumentField*> (query_instrument_[i]);
+		CThostFtdcQryInstrumentMarginRateField Ins;
+		int len = ctp_broker_id_.length();
+		//char *b = new char[len];
+		ctp_broker_id_.copy(Ins.BrokerID, len, 0);
+		len = ctp_investor_id_.length();
+		ctp_investor_id_.copy(Ins.InvestorID, len, 0);
+		strcpy_s(Ins.InstrumentID,p->InstrumentID);
+		//投机套保Ins.HedgeFlag---'1'——投机;'2'——套利;'3'——套保;
+		this->ctp_trade->ReqQryInstrumentMarginRate(&Ins,++trade_request_id_);
+		boost::this_thread::sleep(boost::posix_time::seconds(1));
+	}
+	query_buffer_.clear();
+	query_finished_ = false;
+	query_lock.unlock();
+}
+
+void ReqInstrument::OnRspQryInstrumentMarginRate(CThostFtdcInstrumentMarginRateField *pInstrumentMarginRate, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	if (!IsErrorRspInfo(pRspInfo))
+	{
+		ofile3 << "合约代码: " << pInstrumentMarginRate->InstrumentID << "\t";
+		ofile3 << "投资者范围: " << pInstrumentMarginRate->InvestorRange << "\t";
+		ofile3 << "经纪公司代码: " << pInstrumentMarginRate->BrokerID << "\t";
+		ofile3 << "投资者代码: " << pInstrumentMarginRate->InvestorID << "\t";
+		ofile3 << "投机套保标志: " << pInstrumentMarginRate->HedgeFlag << "\t";
+		ofile3 << "多头保证金率: " << pInstrumentMarginRate->LongMarginRatioByMoney << "\t";
+		ofile3 << "多头保证金费: " << pInstrumentMarginRate->LongMarginRatioByVolume << "\t";
+		ofile3 << "空头保证金率: " << pInstrumentMarginRate->ShortMarginRatioByMoney << "\t";
+		ofile3 << "空头保证金费: " << pInstrumentMarginRate->ShortMarginRatioByVolume << "\t";
+		ofile3 << "是否相对交易所收取: " << pInstrumentMarginRate->IsRelative << endl;
+		if (bIsLast)
+		{
+			cout << "查询结果在文件MarginRate.txt中" << endl;
+			ReqQryInstrumentCommissionRate();
+			boost::this_thread::sleep(boost::posix_time::seconds(1));
+		}
+	}
+}
+
+void ReqInstrument::ReqQryInstrumentCommissionRate()
+{
+	unique_lock<mutex> query_lock(query_mutex_);
+	ReqQryInstrument();
+	while (false == query_finished_)
+	{
+		query_cv_.wait(query_lock);
+	}
+	int s = query_instrument_.size();
+#pragma omp parallel num_threads(4)
+	for (int i = 0; i < s; i++)
+	{
+
+		CThostFtdcInstrumentField *p = static_cast<CThostFtdcInstrumentField*> (query_instrument_[i]);
+		CThostFtdcQryInstrumentCommissionRateField Ins;
+		int len = ctp_broker_id_.length();
+		//char *b = new char[len];
+		ctp_broker_id_.copy(Ins.BrokerID, len, 0);
+		len = ctp_investor_id_.length();
+		ctp_investor_id_.copy(Ins.InvestorID, len, 0);
+		strcpy_s(Ins.InstrumentID, p->InstrumentID);
+		//交易所代码	ExchangeID
+		this->ctp_trade->ReqQryInstrumentCommissionRate(&Ins, ++trade_request_id_);
+		boost::this_thread::sleep(boost::posix_time::seconds(1));
+	}
+	query_buffer_.clear();
+	query_finished_ = false;
+	query_lock.unlock();
+}
+
+void ReqInstrument::OnRspQryInstrumentCommissionRate(CThostFtdcInstrumentCommissionRateField *pInstrumentCommissionRate, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+{
+	if (!IsErrorRspInfo(pRspInfo))
+	{
+		ofile4 << "合约代码: " << pInstrumentCommissionRate->InstrumentID << "\t";
+		ofile4 << "投资者范围: " << pInstrumentCommissionRate->InvestorRange << "\t";
+		ofile4 << "经纪公司代码: " << pInstrumentCommissionRate->BrokerID << "\t";
+		ofile4 << "投资者代码: " << pInstrumentCommissionRate->InvestorID << "\t";
+		ofile4 << "开仓手续费率: " << pInstrumentCommissionRate->OpenRatioByMoney << "\t";
+		ofile4 << "开仓手续费: " << pInstrumentCommissionRate->OpenRatioByVolume << "\t";
+		ofile4 << "平仓手续费率: " << pInstrumentCommissionRate->CloseRatioByMoney << "\t";
+		ofile4 << "平仓手续费: " << pInstrumentCommissionRate->CloseRatioByVolume << "\t";
+		ofile4 << "平今手续费率: " << pInstrumentCommissionRate->CloseTodayRatioByMoney << "\t";
+		ofile4 << "平今手续费: " << pInstrumentCommissionRate->CloseTodayRatioByVolume << "\t";
+		ofile4 << "交易所代码: " << pInstrumentCommissionRate->ExchangeID << "\t";
+		ofile4 << "业务类型: " << pInstrumentCommissionRate->BizType << endl;
+		if (bIsLast)
+		{
+			cout << "查询结果在文件MarginRate.txt中" << endl;
+			ReqQryInstrumentCommissionRate();
+			boost::this_thread::sleep(boost::posix_time::seconds(1));
+		}
+	}
+}
+
 void ReqInstrument::OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
 {
 	cout << "OnRspError" << endl;
@@ -347,6 +506,9 @@ int _tmain(int argc, _TCHAR* argv[])
 	r.load_connection_from_file();
 	ofile.open("Instrument.txt");
 	ofile1.open("Exchange.txt");
+	ofile2.open("Product.txt");
+	ofile3.open("MarginRate.txt");
+	ofile4.open("CommissionRate.txt");
 	vector<CtpConnectionInfo> conns = r.getConn();
 	int s = conns.size();
 	//omp_set_num_threads(2);
